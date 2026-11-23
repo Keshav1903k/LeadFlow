@@ -1,6 +1,5 @@
 import { NavLink } from "react-router-dom"
 import {
-  TrendingUp,
   LayoutDashboard,
   Users,
   LogOut,
@@ -50,13 +49,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         {/* Top Header */}
         <div>
           <div className="h-16 px-6 flex items-center justify-between border-b border-[#E7E3DB]">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#0E7C66] flex items-center justify-center text-white shadow-sm">
-                <TrendingUp className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <span className="font-heading font-bold text-xl text-[#1A1A17] tracking-tight">
-                LeadFlow
-              </span>
+            <div className="flex items-center gap-2">
+              <img
+                src="/logo-full.png"
+                alt="LeadFlow"
+                className="h-7 w-auto object-contain"
+              />
             </div>
             {onClose && (
               <button

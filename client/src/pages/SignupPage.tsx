@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { TrendingUp } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
@@ -46,9 +45,11 @@ export function SignupPage() {
       <div className="w-full max-w-md">
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-10 h-10 rounded-xl bg-[#0E7C66] flex items-center justify-center text-white shadow-sm mb-3">
-            <TrendingUp className="w-6 h-6 stroke-[2.5]" />
-          </div>
+          <img
+            src="/logo-icon.png"
+            alt="LeadFlow"
+            className="w-12 h-12 rounded-xl object-contain mb-3 drop-shadow-sm"
+          />
           <h1 className="text-2xl font-bold font-heading text-[#1A1A17] tracking-tight">
             Create your account
           </h1>

@@ -111,7 +111,12 @@ function AppContent() {
     } else {
       const newLead: Lead = {
         id: `lead-${Date.now()}`,
-        ...formData,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        company: formData.company ?? null,
+        source: formData.source,
+        status: formData.status,
         createdAt: new Date().toISOString(),
       }
       updateLeads([newLead, ...leads])
