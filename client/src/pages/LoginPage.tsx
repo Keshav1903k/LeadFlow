@@ -40,11 +40,12 @@ export function LoginPage() {
   const handleDemoLogin = async () => {
     setEmail("keshav@leadflow.app")
     setPassword("password123")
+    setGeneralError("")
     try {
       await login("keshav@leadflow.app", "password123")
       navigate("/leads")
-    } catch {
-      setGeneralError("Demo login failed")
+    } catch (err: any) {
+      setGeneralError(err.error || "Demo login failed")
     }
   }
 
