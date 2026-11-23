@@ -1,22 +1,44 @@
 import { useState } from "react"
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom"
 import { Toaster, toast } from "sonner"
+import { AuthProvider, useAuth } from "./context/AuthContext"
 import { Layout } from "./components/Layout"
 import { LeadsPage } from "./pages/LeadsPage"
 import { OverviewPage } from "./pages/OverviewPage"
+import { LoginPage } from "./pages/LoginPage"
+import { SignupPage } from "./pages/SignupPage"
 import { LeadDrawer } from "./components/LeadDrawer"
 import { DeleteLeadDialog } from "./components/DeleteLeadDialog"
 import { INITIAL_LEADS } from "./lib/mockData"
 import { Lead, LeadStatus, LeadSource } from "./types/lead"
 
-export default function App() {
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { token } = useAuth()
+  const location = useLocation()
+
+  if (!token) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  return <>{children}</>
+}
+
+function PublicOnly({ children }: { children: React.ReactNode }) {
+  const { token } = useAuth()
+  if (token) {
+    return <Navigate to="/leads" replace />
+  }
+  return <>{children}</>
+}
+
+function AppContent() {
   const [leads, setLeads] = useState<Lead[]>(() => {
     const saved = localStorage.getItem("leadflow_leads")
     if (saved) {
       try {
         return JSON.parse(saved)
       } catch {
-        // Fall back to INITIAL_LEADS on parse error
+        // Fall back to INITIAL_LEADS
       }
     }
     return INITIAL_LEADS
@@ -36,25 +58,21 @@ export default function App() {
     localStorage.setItem("leadflow_leads", JSON.stringify(newLeads))
   }
 
-  // Handle open Add lead
   const handleOpenAdd = () => {
     setEditingLead(null)
     setIsDrawerOpen(true)
   }
 
-  // Handle open Edit lead
   const handleOpenEdit = (lead: Lead) => {
     setEditingLead(lead)
     setIsDrawerOpen(true)
   }
 
-  // Handle open Delete dialog
   const handleOpenDelete = (lead: Lead) => {
     setDeletingLead(lead)
     setIsDeleteDialogOpen(true)
   }
 
-  // Save lead (Add or Edit)
   const handleSaveLead = async (formData: {
     name: string
     email: string
@@ -63,7 +81,6 @@ export default function App() {
     source: LeadSource
     status: LeadStatus
   }) => {
-    // Check for duplicate email (unique constraint check)
     const existing = leads.find(
       (l) =>
         l.email.toLowerCase() === formData.email.toLowerCase() &&
@@ -80,7 +97,6 @@ export default function App() {
     }
 
     if (editingLead) {
-      // Edit existing
       const updated = leads.map((l) =>
         l.id === editingLead.id
           ? {
@@ -93,7 +109,6 @@ export default function App() {
       updateLeads(updated)
       toast.success("Lead updated successfully")
     } else {
-      // Create new lead
       const newLead: Lead = {
         id: `lead-${Date.now()}`,
         ...formData,
@@ -104,14 +119,12 @@ export default function App() {
     }
   }
 
-  // Confirm delete
   const handleConfirmDelete = (lead: Lead) => {
     const updated = leads.filter((l) => l.id !== lead.id)
     updateLeads(updated)
     toast.success(`Deleted lead "${lead.name}"`)
   }
 
-  // Inline status change
   const handleStatusChange = (id: string, newStatus: LeadStatus) => {
     const lead = leads.find((l) => l.id === id)
     const updated = leads.map((l) =>
@@ -124,15 +137,30 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Toaster position="top-right" richColors />
-
+    <>
       <Routes>
         <Route
+          path="/login"
           element={
-            <Layout
-              onAddLeadClick={handleOpenAdd}
-            />
+            <PublicOnly>
+              <LoginPage />
+            </PublicOnly>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <PublicOnly>
+              <SignupPage />
+            </PublicOnly>
+          }
+        />
+
+        <Route
+          element={
+            <RequireAuth>
+              <Layout onAddLeadClick={handleOpenAdd} />
+            </RequireAuth>
           }
         >
           <Route path="/" element={<Navigate to="/leads" replace />} />
@@ -152,11 +180,11 @@ export default function App() {
               />
             }
           />
-          <Route path="*" element={<Navigate to="/leads" replace />} />
         </Route>
+
+        <Route path="*" element={<Navigate to="/leads" replace />} />
       </Routes>
 
-      {/* Shared Lead Drawer (Add / Edit) */}
       <LeadDrawer
         open={isDrawerOpen}
         onClose={() => {
@@ -167,7 +195,6 @@ export default function App() {
         leadToEdit={editingLead}
       />
 
-      {/* Delete Confirmation Modal */}
       <DeleteLeadDialog
         open={isDeleteDialogOpen}
         lead={deletingLead}
@@ -177,6 +204,17 @@ export default function App() {
         }}
         onConfirm={handleConfirmDelete}
       />
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Toaster position="top-right" richColors />
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   )
 }

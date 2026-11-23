@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import { authRouter } from './routes/auth.js'
 import { leadsRouter } from './routes/leads.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
@@ -15,6 +16,9 @@ app.use(express.json())
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'LeadFlow API' })
 })
+
+// Authentication
+app.use('/api/auth', authRouter)
 
 // Leads CRUD & stats
 app.use('/api/leads', leadsRouter)

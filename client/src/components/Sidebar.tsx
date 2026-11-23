@@ -7,6 +7,7 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "../lib/utils"
+import { useAuth } from "../context/AuthContext"
 
 interface SidebarProps {
   isOpen?: boolean
@@ -14,10 +15,21 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+  const { user, logout } = useAuth()
+
   const navItems = [
     { label: "Overview", to: "/overview", icon: LayoutDashboard },
     { label: "Leads", to: "/leads", icon: Users },
   ]
+
+  const userName = user?.name || "Keshav Sharma"
+  const initials = userName
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "KS"
 
   return (
     <>
@@ -88,17 +100,18 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         <div className="p-4 border-t border-[#E7E3DB]">
           <div className="flex items-center gap-3 mb-3 px-1">
             <div className="w-9 h-9 rounded-full bg-[#EAE8E2] border border-[#E7E3DB] flex items-center justify-center text-[#1A1A17] font-semibold text-xs tracking-wider flex-shrink-0">
-              KS
+              {initials}
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium text-[#1A1A17] truncate leading-tight">
-                Keshav Sharma
+                {userName}
               </p>
               <p className="text-xs text-[#5C5A54] truncate">Sales Manager</p>
             </div>
           </div>
           <button
             type="button"
+            onClick={logout}
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium text-[#5C5A54] hover:text-[#1A1A17] hover:bg-stone-100 transition-colors"
           >
             <LogOut className="w-4 h-4" />
