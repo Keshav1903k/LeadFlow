@@ -25,3 +25,5 @@ app.use('/api/leads', leadsRouter)
 
 // Central error handler
 app.use(errorHandler)
+
+export default app
