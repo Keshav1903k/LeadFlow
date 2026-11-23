@@ -3,21 +3,18 @@ import { prisma } from '../lib/prisma.js'
 import { authMiddleware, AuthRequest } from '../middleware/auth.js'
 import { validate } from '../middleware/validate.js'
 import { createLeadSchema, updateLeadSchema } from '../schemas/leadSchema.js'
-import { LeadSource, LeadStatus } from '@prisma/client'
+import { LeadSource, LeadStatus, Prisma } from '@prisma/client'
 
 export const leadsRouter = Router()
 
-// All routes require authentication
 leadsRouter.use(authMiddleware)
 
-// Helper to convert Prisma enum to UI source label
 function formatSource(source: LeadSource): string {
   if (source === 'Cold_Call') return 'Cold Call'
   if (source === 'Google_Ads') return 'Google Ads'
   return source
 }
 
-// Helper to convert UI label to Prisma enum
 function toPrismaSource(source: string): LeadSource {
   if (source === 'Cold Call') return 'Cold_Call'
   if (source === 'Google Ads') return 'Google_Ads'
@@ -30,7 +27,8 @@ leadsRouter.get('/stats', async (req: AuthRequest, res: Response) => {
 
   const leads = await prisma.lead.findMany({
     where: { userId },
-    select: { status: true, createdAt: true },
+    select: { id: true, name: true, email: true, phone: true, company: true, source: true, status: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
   })
 
   const total = leads.length
@@ -56,11 +54,17 @@ leadsRouter.get('/stats', async (req: AuthRequest, res: Response) => {
   const qualifiedCount = counts.Qualified || 0
   const conversionRate = total > 0 ? ((qualifiedCount / total) * 100).toFixed(1) : '0'
 
+  const recentLeads = leads.slice(0, 5).map((l) => ({
+    ...l,
+    source: formatSource(l.source),
+  }))
+
   res.json({
     total,
     counts,
     conversionRate: `${conversionRate}%`,
     addedThisWeek,
+    recentLeads,
   })
 })
 
@@ -71,9 +75,9 @@ leadsRouter.get('/', async (req: AuthRequest, res: Response) => {
 
   const pageNum = Math.max(1, parseInt(page as string, 10) || 1)
   const pageSize = 10
-  const sortDirection = sort === 'asc' ? 'asc' : 'desc'
+  const sortDirection: Prisma.SortOrder = sort === 'asc' ? 'asc' : 'desc'
 
-  const where: any = { userId }
+  const where: Prisma.LeadWhereInput = { userId }
 
   if (status && status !== 'All') {
     where.status = status as LeadStatus
@@ -91,10 +95,8 @@ leadsRouter.get('/', async (req: AuthRequest, res: Response) => {
     ]
   }
 
-  // Get total count matching current filter
   const total = await prisma.lead.count({ where })
 
-  // Get status counts across all user leads (for tabs)
   const allUserLeads = await prisma.lead.findMany({
     where: { userId },
     select: { status: true },
@@ -114,7 +116,6 @@ leadsRouter.get('/', async (req: AuthRequest, res: Response) => {
     }
   }
 
-  // Query paginated items
   const rawLeads = await prisma.lead.findMany({
     where,
     orderBy: { createdAt: sortDirection },
@@ -143,7 +144,6 @@ leadsRouter.post('/', validate(createLeadSchema), async (req: AuthRequest, res: 
   const userId = req.userId!
   const { name, email, phone, company, source, status } = req.body
 
-  // Check unique on (userId, email)
   const existing = await prisma.lead.findUnique({
     where: {
       userId_email: {
@@ -184,7 +184,6 @@ leadsRouter.put('/:id', validate(updateLeadSchema), async (req: AuthRequest, res
   const id = req.params.id
   const { name, email, phone, company, source, status } = req.body
 
-  // Find lead and verify ownership
   const lead = await prisma.lead.findFirst({
     where: { id, userId },
   })
@@ -193,7 +192,6 @@ leadsRouter.put('/:id', validate(updateLeadSchema), async (req: AuthRequest, res
     return res.status(404).json({ error: 'Lead not found' })
   }
 
-  // If email changed, check uniqueness
   if (email && email.toLowerCase() !== lead.email.toLowerCase()) {
     const existing = await prisma.lead.findUnique({
       where: {
@@ -211,7 +209,7 @@ leadsRouter.put('/:id', validate(updateLeadSchema), async (req: AuthRequest, res
     }
   }
 
-  const data: any = {}
+  const data: Prisma.LeadUpdateInput = {}
   if (name !== undefined) data.name = name
   if (email !== undefined) data.email = email
   if (phone !== undefined) data.phone = phone

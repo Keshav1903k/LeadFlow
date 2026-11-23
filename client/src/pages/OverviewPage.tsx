@@ -1,19 +1,46 @@
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowRight, Pencil, Trash2 } from "lucide-react"
+import { ArrowRight, RefreshCw, AlertCircle } from "lucide-react"
 import { Lead } from "../types/lead"
-import { INITIAL_LEADS, formatRelativeDate } from "../lib/mockData"
 import { StatusBadge } from "../components/StatusBadge"
+import { fetchLeadStats, updateLeadApi } from "../lib/api"
+import { formatRelativeDate } from "../lib/dateUtils"
+import { useAuth } from "../context/AuthContext"
+import { Button } from "../components/ui/button"
+import { toast } from "sonner"
 
-interface OverviewPageProps {
-  leadsData?: Lead[]
-  onStatusFilterSelect?: (status: string) => void
+interface StatsData {
+  total: number
+  counts: Record<string, number>
+  conversionRate: string
+  addedThisWeek: number
+  recentLeads: Lead[]
 }
 
-export function OverviewPage({ leadsData }: OverviewPageProps) {
+export function OverviewPage() {
   const navigate = useNavigate()
-  const leads = leadsData || INITIAL_LEADS
+  const { user } = useAuth()
+  const [stats, setStats] = useState<StatsData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Greeting based on time of day
+  const loadStats = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await fetchLeadStats()
+      setStats(data)
+    } catch (err: any) {
+      setError(err?.error || "Failed to load pipeline stats.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadStats()
+  }, [])
+
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return "Good morning"
@@ -21,37 +48,75 @@ export function OverviewPage({ leadsData }: OverviewPageProps) {
     return "Good evening"
   }
 
-  // Calculate statistics
-  const totalLeads = leads.length
-  const qualifiedCount = leads.filter((l) => l.status === "Qualified").length
-  const newCount = leads.filter((l) => l.status === "New").length
-  const contactedCount = leads.filter((l) => l.status === "Contacted").length
-  const lostCount = leads.filter((l) => l.status === "Lost").length
-
-  const conversionRate =
-    totalLeads > 0 ? ((qualifiedCount / totalLeads) * 100).toFixed(1) : "0"
-
-  // Added in last 7 days
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).getTime()
-  const addedThisWeek = leads.filter(
-    (l) => new Date(l.createdAt).getTime() >= sevenDaysAgo
-  ).length
-
-  // Top 5 most recent leads
-  const recentLeads = [...leads]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5)
-
-  const handleStageClick = () => {
-    navigate("/leads")
+  const handleStageClick = (status: string) => {
+    navigate(`/leads?status=${status}`)
   }
+
+  const handleInlineStatusChange = async (id: string, newStatus: any) => {
+    try {
+      await updateLeadApi(id, { status: newStatus })
+      toast.success(`Status updated to ${newStatus}`)
+      loadStats()
+    } catch {
+      toast.error("Failed to update status")
+    }
+  }
+
+  if (error) {
+    return (
+      <div className="py-16 text-center">
+        <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3 text-red-600">
+          <AlertCircle className="w-5 h-5" />
+        </div>
+        <h3 className="text-sm font-semibold text-[#1A1A17]">Connection error</h3>
+        <p className="text-xs text-[#5C5A54] mt-1 max-w-sm mx-auto">{error}</p>
+        <div className="mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadStats}
+            className="inline-flex items-center gap-1.5 text-xs text-[#1A1A17]"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry</span>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoading || !stats) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="space-y-2">
+          <div className="h-8 bg-stone-200 rounded w-48" />
+          <div className="h-4 bg-stone-100 rounded w-96" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="h-32 bg-stone-200/60 rounded-xl" />
+          <div className="h-32 bg-stone-200/60 rounded-xl" />
+          <div className="h-32 bg-stone-200/60 rounded-xl" />
+        </div>
+        <div className="h-28 bg-stone-200/60 rounded-xl" />
+        <div className="h-64 bg-stone-200/60 rounded-xl" />
+      </div>
+    )
+  }
+
+  const total = stats.total
+  const qualifiedCount = stats.counts.Qualified || 0
+  const newCount = stats.counts.New || 0
+  const contactedCount = stats.counts.Contacted || 0
+  const lostCount = stats.counts.Lost || 0
+
+  const firstName = user?.name ? user.name.split(" ")[0] : "there"
 
   return (
     <div className="space-y-8">
       {/* Greeting Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold font-heading text-[#1A1A17] tracking-tight">
-          {getGreeting()}, Keshav
+          {getGreeting()}, {firstName}
         </h1>
         <p className="mt-1 text-sm text-[#5C5A54]">
           {qualifiedCount} leads are qualified and ready for a proposal. {newCount} new leads haven't been contacted yet.
@@ -65,7 +130,7 @@ export function OverviewPage({ leadsData }: OverviewPageProps) {
             Total leads
           </p>
           <p className="text-3xl font-bold font-heading text-[#1A1A17] mt-3">
-            {totalLeads}
+            {total}
           </p>
           <p className="text-xs text-[#5C5A54] mt-1">Across your pipeline</p>
         </div>
@@ -75,10 +140,10 @@ export function OverviewPage({ leadsData }: OverviewPageProps) {
             Conversion rate
           </p>
           <p className="text-3xl font-bold font-heading text-[#1A1A17] mt-3">
-            {conversionRate}%
+            {stats.conversionRate}
           </p>
           <p className="text-xs text-[#5C5A54] mt-1">
-            {qualifiedCount} of {totalLeads} qualified
+            {qualifiedCount} of {total} qualified
           </p>
         </div>
 
@@ -87,7 +152,7 @@ export function OverviewPage({ leadsData }: OverviewPageProps) {
             Added this week
           </p>
           <p className="text-3xl font-bold font-heading text-[#1A1A17] mt-3">
-            {addedThisWeek}
+            {stats.addedThisWeek}
           </p>
           <p className="text-xs text-[#5C5A54] mt-1">Added in the last 7 days</p>
         </div>
@@ -105,55 +170,65 @@ export function OverviewPage({ leadsData }: OverviewPageProps) {
         </div>
 
         {/* Multi-segment bar */}
-        <div className="h-4 w-full bg-stone-100 rounded-full overflow-hidden flex cursor-pointer" onClick={handleStageClick}>
-          <div
-            style={{ width: `${(newCount / totalLeads) * 100}%` }}
-            className="bg-[#64748B] h-full transition-all hover:opacity-90"
-            title={`New: ${newCount}`}
-          />
-          <div
-            style={{ width: `${(contactedCount / totalLeads) * 100}%` }}
-            className="bg-[#D97706] h-full transition-all hover:opacity-90"
-            title={`Contacted: ${contactedCount}`}
-          />
-          <div
-            style={{ width: `${(qualifiedCount / totalLeads) * 100}%` }}
-            className="bg-[#0E7C66] h-full transition-all hover:opacity-90"
-            title={`Qualified: ${qualifiedCount}`}
-          />
-          <div
-            style={{ width: `${(lostCount / totalLeads) * 100}%` }}
-            className="bg-[#B91C1C] h-full transition-all hover:opacity-90"
-            title={`Lost: ${lostCount}`}
-          />
+        <div className="h-4 w-full bg-stone-100 rounded-full overflow-hidden flex">
+          {total > 0 ? (
+            <>
+              <div
+                style={{ width: `${(newCount / total) * 100}%` }}
+                className="bg-[#64748B] h-full transition-all hover:opacity-90 cursor-pointer"
+                title={`New: ${newCount}`}
+                onClick={() => handleStageClick("New")}
+              />
+              <div
+                style={{ width: `${(contactedCount / total) * 100}%` }}
+                className="bg-[#D97706] h-full transition-all hover:opacity-90 cursor-pointer"
+                title={`Contacted: ${contactedCount}`}
+                onClick={() => handleStageClick("Contacted")}
+              />
+              <div
+                style={{ width: `${(qualifiedCount / total) * 100}%` }}
+                className="bg-[#0E7C66] h-full transition-all hover:opacity-90 cursor-pointer"
+                title={`Qualified: ${qualifiedCount}`}
+                onClick={() => handleStageClick("Qualified")}
+              />
+              <div
+                style={{ width: `${(lostCount / total) * 100}%` }}
+                className="bg-[#B91C1C] h-full transition-all hover:opacity-90 cursor-pointer"
+                title={`Lost: ${lostCount}`}
+                onClick={() => handleStageClick("Lost")}
+              />
+            </>
+          ) : (
+            <div className="w-full bg-stone-200 h-full" />
+          )}
         </div>
 
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-[#1A1A17] font-medium">
           <div
             className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-            onClick={handleStageClick}
+            onClick={() => handleStageClick("New")}
           >
             <span className="w-2.5 h-2.5 rounded-full bg-[#64748B]" />
             <span>New <span className="font-bold">{newCount}</span></span>
           </div>
           <div
             className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-            onClick={handleStageClick}
+            onClick={() => handleStageClick("Contacted")}
           >
             <span className="w-2.5 h-2.5 rounded-full bg-[#D97706]" />
             <span>Contacted <span className="font-bold">{contactedCount}</span></span>
           </div>
           <div
             className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-            onClick={handleStageClick}
+            onClick={() => handleStageClick("Qualified")}
           >
             <span className="w-2.5 h-2.5 rounded-full bg-[#0E7C66]" />
             <span>Qualified <span className="font-bold">{qualifiedCount}</span></span>
           </div>
           <div
             className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-            onClick={handleStageClick}
+            onClick={() => handleStageClick("Lost")}
           >
             <span className="w-2.5 h-2.5 rounded-full bg-[#B91C1C]" />
             <span>Lost <span className="font-bold">{lostCount}</span></span>
@@ -187,60 +262,54 @@ export function OverviewPage({ leadsData }: OverviewPageProps) {
                 <th className="py-3 px-6">SOURCE</th>
                 <th className="py-3 px-6">STATUS</th>
                 <th className="py-3 px-6">CREATED</th>
-                <th className="py-3 px-6 text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E3DB]">
-              {recentLeads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-stone-50/70 transition-colors">
-                  <td className="py-3 px-6">
-                    <div className="font-medium text-[#1A1A17] text-sm">
-                      {lead.name}
-                    </div>
-                    <div className="text-xs text-[#5C5A54]">
-                      {lead.company || "-"}
-                    </div>
-                  </td>
-                  <td className="py-3 px-6">
-                    <a
-                      href={`mailto:${lead.email}`}
-                      className="text-[#0E7C66] hover:underline text-sm font-medium"
-                    >
-                      {lead.email}
-                    </a>
-                  </td>
-                  <td className="py-3 px-6 text-sm text-[#1A1A17]">
-                    {lead.phone}
-                  </td>
-                  <td className="py-3 px-6 text-sm text-[#5C5A54]">
-                    {lead.source}
-                  </td>
-                  <td className="py-3 px-6">
-                    <StatusBadge status={lead.status} />
-                  </td>
-                  <td className="py-3 px-6 text-sm text-[#5C5A54]">
-                    {formatRelativeDate(lead.createdAt)}
-                  </td>
-                  <td className="py-3 px-6 text-right">
-                    <div className="inline-flex items-center gap-1 justify-end">
-                      <button
-                        type="button"
-                        onClick={() => navigate("/leads")}
-                        className="p-1.5 rounded-md text-[#5C5A54] hover:text-[#1A1A17] hover:bg-stone-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => navigate("/leads")}
-                        className="p-1.5 rounded-md text-[#5C5A54] hover:text-[#B91C1C] hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+              {stats.recentLeads.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-[#5C5A54] text-xs">
+                    No leads added yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                stats.recentLeads.map((lead) => (
+                  <tr key={lead.id} className="hover:bg-stone-50/70 transition-colors">
+                    <td className="py-3 px-6">
+                      <div className="font-medium text-[#1A1A17] text-sm">
+                        {lead.name}
+                      </div>
+                      <div className="text-xs text-[#5C5A54]">
+                        {lead.company || "-"}
+                      </div>
+                    </td>
+                    <td className="py-3 px-6">
+                      <a
+                        href={`mailto:${lead.email}`}
+                        className="text-[#0E7C66] hover:underline text-sm font-medium"
+                      >
+                        {lead.email}
+                      </a>
+                    </td>
+                    <td className="py-3 px-6 text-sm text-[#1A1A17]">
+                      {lead.phone}
+                    </td>
+                    <td className="py-3 px-6 text-sm text-[#5C5A54]">
+                      {lead.source}
+                    </td>
+                    <td className="py-3 px-6">
+                      <StatusBadge
+                        status={lead.status}
+                        onStatusChange={(newStatus) =>
+                          handleInlineStatusChange(lead.id, newStatus)
+                        }
+                      />
+                    </td>
+                    <td className="py-3 px-6 text-sm text-[#5C5A54]">
+                      {formatRelativeDate(lead.createdAt)}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

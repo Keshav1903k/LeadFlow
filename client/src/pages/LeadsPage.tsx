@@ -1,119 +1,121 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useSearchParams } from "react-router-dom"
 import { Search, ChevronDown, ArrowDown, ArrowUp, Pencil, Trash2, Mail } from "lucide-react"
-import { Lead, LeadStatus, SortOrder } from "../types/lead"
-import { INITIAL_LEADS, formatRelativeDate } from "../lib/mockData"
+import { toast } from "sonner"
+import { Lead, LeadStatus, LeadSource, SortOrder } from "../types/lead"
 import { StatusBadge } from "../components/StatusBadge"
-import { leadSources } from "../lib/validation"
-import { cn } from "../lib/utils"
+import { LeadDrawer } from "../components/LeadDrawer"
+import { DeleteLeadDialog } from "../components/DeleteLeadDialog"
 import {
   EmptyState,
   NoResultsState,
   ErrorState,
   TableLoadingSkeleton,
 } from "../components/LeadTableStates"
+import { leadSources } from "../lib/validation"
+import { formatRelativeDate } from "../lib/dateUtils"
+import { cn } from "../lib/utils"
+import {
+  fetchLeads,
+  createLeadApi,
+  updateLeadApi,
+  deleteLeadApi,
+} from "../lib/api"
 
-const ITEMS_PER_PAGE = 10
+export function LeadsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialStatus = searchParams.get("status") || "All"
 
-interface LeadsPageProps {
-  leadsData?: Lead[]
-  isLoading?: boolean
-  error?: string | null
-  onRetry?: () => void
-  onAddLeadClick?: () => void
-  onEditLead?: (lead: Lead) => void
-  onDeleteLead?: (lead: Lead) => void
-  onStatusChange?: (id: string, newStatus: LeadStatus) => void
-}
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({
+    All: 0,
+    New: 0,
+    Contacted: 0,
+    Qualified: 0,
+    Lost: 0,
+  })
 
-export function LeadsPage({
-  leadsData,
-  isLoading = false,
-  error = null,
-  onRetry,
-  onAddLeadClick,
-  onEditLead,
-  onDeleteLead,
-  onStatusChange,
-}: LeadsPageProps) {
-  const [leads, setLeads] = useState<Lead[]>(leadsData || INITIAL_LEADS)
-  const [selectedStatus, setSelectedStatus] = useState<string>("All")
+  const [selectedStatus, setSelectedStatus] = useState<string>(initialStatus)
   const [selectedSource, setSelectedSource] = useState<string>("All")
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
   const [currentPage, setCurrentPage] = useState<number>(1)
 
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Drawer & Dialog state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [editingLead, setEditingLead] = useState<Lead | null>(null)
+  const [deletingLead, setDeletingLead] = useState<Lead | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+  // Load leads from API
+  const loadLeads = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await fetchLeads({
+        search: searchQuery,
+        status: selectedStatus,
+        source: selectedSource,
+        page: currentPage,
+        sort: sortOrder,
+      })
+      setLeads(data.leads || [])
+      setTotal(data.total || 0)
+      setTotalPages(data.totalPages || 1)
+      if (data.statusCounts) {
+        setStatusCounts(data.statusCounts)
+      }
+    } catch (err: any) {
+      setError(err?.error || "Failed to load leads from the server.")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [searchQuery, selectedStatus, selectedSource, currentPage, sortOrder])
+
   useEffect(() => {
-    if (leadsData) {
-      setLeads(leadsData)
+    loadLeads()
+  }, [loadLeads])
+
+  // Sync status or action if URL searchParam changes
+  useEffect(() => {
+    const paramStatus = searchParams.get("status")
+    if (paramStatus && paramStatus !== selectedStatus) {
+      setSelectedStatus(paramStatus)
+      setCurrentPage(1)
     }
-  }, [leadsData])
 
-  // Compute status counts across all leads
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      All: leads.length,
-      New: 0,
-      Contacted: 0,
-      Qualified: 0,
-      Lost: 0,
+    if (searchParams.get("action") === "add") {
+      setEditingLead(null)
+      setIsDrawerOpen(true)
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete("action")
+      setSearchParams(nextParams, { replace: true })
     }
-    leads.forEach((l) => {
-      if (counts[l.status] !== undefined) {
-        counts[l.status] += 1
-      }
-    })
-    return counts
-  }, [leads])
+  }, [searchParams, selectedStatus, setSearchParams])
 
-  // Filter leads by search query, status tab, and source dropdown
-  const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
-      if (selectedStatus !== "All" && lead.status !== selectedStatus) {
-        return false
-      }
-      if (selectedSource !== "All" && lead.source !== selectedSource) {
-        return false
-      }
-      if (searchQuery.trim() !== "") {
-        const query = searchQuery.toLowerCase().trim()
-        const matchesName = lead.name.toLowerCase().includes(query)
-        const matchesCompany = lead.company?.toLowerCase().includes(query)
-        if (!matchesName && !matchesCompany) {
-          return false
-        }
-      }
-      return true
-    })
-  }, [leads, selectedStatus, selectedSource, searchQuery])
-
-  // Sort filtered leads by createdAt
-  const sortedLeads = useMemo(() => {
-    return [...filteredLeads].sort((a, b) => {
-      const timeA = new Date(a.createdAt).getTime()
-      const timeB = new Date(b.createdAt).getTime()
-      return sortOrder === "desc" ? timeB - timeA : timeA - timeB
-    })
-  }, [filteredLeads, sortOrder])
-
-  // Pagination calculation
-  const totalLeads = sortedLeads.length
-  const totalPages = Math.max(1, Math.ceil(totalLeads / ITEMS_PER_PAGE))
-  const safePage = Math.min(currentPage, totalPages)
-  const startIndex = (safePage - 1) * ITEMS_PER_PAGE
-  const paginatedLeads = sortedLeads.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-
-  const handleStatusFilterChange = (status: string) => {
+  const handleStatusTabChange = (status: string) => {
     setSelectedStatus(status)
     setCurrentPage(1)
+    if (status === "All") {
+      searchParams.delete("status")
+      setSearchParams(searchParams)
+    } else {
+      setSearchParams({ status })
+    }
   }
 
-  const handleSourceFilterChange = (source: string) => {
+  const handleSourceChange = (source: string) => {
     setSelectedSource(source)
     setCurrentPage(1)
   }
 
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query)
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val)
     setCurrentPage(1)
   }
 
@@ -122,10 +124,63 @@ export function LeadsPage({
     setSelectedSource("All")
     setSearchQuery("")
     setCurrentPage(1)
+    searchParams.delete("status")
+    setSearchParams(searchParams)
   }
 
   const toggleSortOrder = () => {
     setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+  }
+
+  // Lead CRUD handlers
+  const handleSaveLead = async (formData: {
+    name: string
+    email: string
+    phone: string
+    company?: string | null
+    source: LeadSource
+    status: LeadStatus
+  }) => {
+    try {
+      if (editingLead) {
+        await updateLeadApi(editingLead.id, formData)
+        toast.success("Lead updated successfully")
+      } else {
+        await createLeadApi(formData)
+        toast.success("Lead created successfully")
+      }
+      setIsDrawerOpen(false)
+      setEditingLead(null)
+      loadLeads()
+    } catch (err: any) {
+      if (err.fields) {
+        throw err
+      }
+      toast.error(err.error || "Failed to save lead")
+      throw err
+    }
+  }
+
+  const handleInlineStatusChange = async (id: string, newStatus: LeadStatus) => {
+    try {
+      await updateLeadApi(id, { status: newStatus })
+      toast.success(`Status updated to ${newStatus}`)
+      loadLeads()
+    } catch {
+      toast.error("Failed to update status")
+    }
+  }
+
+  const handleConfirmDelete = async (lead: Lead) => {
+    try {
+      await deleteLeadApi(lead.id)
+      toast.success(`Deleted lead "${lead.name}"`)
+      setIsDeleteDialogOpen(false)
+      setDeletingLead(null)
+      loadLeads()
+    } catch {
+      toast.error("Failed to delete lead")
+    }
   }
 
   const tabs = [
@@ -136,15 +191,17 @@ export function LeadsPage({
     { key: "Lost", label: `Lost ${statusCounts.Lost}` },
   ]
 
+  const startIndex = (currentPage - 1) * 10
+
   return (
     <div className="space-y-6">
-      {/* Page Title & Subtitle */}
+      {/* Title & Count */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold font-heading text-[#1A1A17] tracking-tight">
           Leads
         </h1>
         <p className="mt-1 text-sm text-[#5C5A54]">
-          {leads.length} leads in your pipeline
+          {statusCounts.All} leads in your pipeline
         </p>
       </div>
 
@@ -158,7 +215,7 @@ export function LeadsPage({
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => handleStatusFilterChange(tab.key)}
+                onClick={() => handleStatusTabChange(tab.key)}
                 className={cn(
                   "relative pb-2 text-sm whitespace-nowrap transition-colors",
                   isActive
@@ -177,7 +234,6 @@ export function LeadsPage({
 
         {/* Search & Source Filter Controls */}
         <div className="flex items-center gap-3">
-          {/* Search by name or company */}
           <div className="relative w-full sm:w-60">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8880]" />
             <input
@@ -189,11 +245,10 @@ export function LeadsPage({
             />
           </div>
 
-          {/* Source Dropdown Filter */}
           <div className="relative">
             <select
               value={selectedSource}
-              onChange={(e) => handleSourceFilterChange(e.target.value)}
+              onChange={(e) => handleSourceChange(e.target.value)}
               className="h-9 pl-3 pr-8 rounded-lg border border-[#E7E3DB] bg-white text-sm text-[#1A1A17] appearance-none focus:outline-none focus:ring-1 focus:ring-[#0E7C66] focus:border-[#0E7C66] cursor-pointer transition-colors"
             >
               <option value="All">All sources</option>
@@ -210,17 +265,18 @@ export function LeadsPage({
 
       {/* Main Table Card */}
       <div className="bg-white rounded-xl border border-[#E7E3DB] shadow-sm overflow-hidden">
-        {/* Error State */}
         {error ? (
-          <ErrorState message={error} onRetry={onRetry || (() => {})} />
+          <ErrorState message={error} onRetry={loadLeads} />
         ) : isLoading ? (
-          /* Loading Skeleton */
           <TableLoadingSkeleton rows={6} />
+        ) : statusCounts.All === 0 ? (
+          <EmptyState
+            onAddLead={() => {
+              setEditingLead(null)
+              setIsDrawerOpen(true)
+            }}
+          />
         ) : leads.length === 0 ? (
-          /* Empty State (0 leads overall) */
-          <EmptyState onAddLead={onAddLeadClick || (() => {})} />
-        ) : filteredLeads.length === 0 ? (
-          /* No Results State (filters matched nothing) */
           <NoResultsState onResetFilters={handleResetFilters} />
         ) : (
           <>
@@ -253,7 +309,7 @@ export function LeadsPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E7E3DB]">
-                  {paginatedLeads.map((lead) => (
+                  {leads.map((lead) => (
                     <tr
                       key={lead.id}
                       className="hover:bg-stone-50/70 transition-colors"
@@ -288,7 +344,7 @@ export function LeadsPage({
                         <StatusBadge
                           status={lead.status}
                           onStatusChange={(newStatus) =>
-                            onStatusChange?.(lead.id, newStatus)
+                            handleInlineStatusChange(lead.id, newStatus)
                           }
                         />
                       </td>
@@ -301,7 +357,10 @@ export function LeadsPage({
                         <div className="inline-flex items-center gap-1 justify-end">
                           <button
                             type="button"
-                            onClick={() => onEditLead?.(lead)}
+                            onClick={() => {
+                              setEditingLead(lead)
+                              setIsDrawerOpen(true)
+                            }}
                             className="p-1.5 rounded-md text-[#5C5A54] hover:text-[#1A1A17] hover:bg-stone-100 transition-colors"
                             title="Edit lead"
                             aria-label={`Edit ${lead.name}`}
@@ -310,7 +369,10 @@ export function LeadsPage({
                           </button>
                           <button
                             type="button"
-                            onClick={() => onDeleteLead?.(lead)}
+                            onClick={() => {
+                              setDeletingLead(lead)
+                              setIsDeleteDialogOpen(true)
+                            }}
                             className="p-1.5 rounded-md text-[#5C5A54] hover:text-[#B91C1C] hover:bg-red-50 transition-colors"
                             title="Delete lead"
                             aria-label={`Delete ${lead.name}`}
@@ -327,7 +389,7 @@ export function LeadsPage({
 
             {/* Mobile Stacked Cards View */}
             <div className="block md:hidden divide-y divide-[#E7E3DB]">
-              {paginatedLeads.map((lead) => (
+              {leads.map((lead) => (
                 <div key={lead.id} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -339,7 +401,7 @@ export function LeadsPage({
                     <StatusBadge
                       status={lead.status}
                       onStatusChange={(newStatus) =>
-                        onStatusChange?.(lead.id, newStatus)
+                        handleInlineStatusChange(lead.id, newStatus)
                       }
                     />
                   </div>
@@ -364,7 +426,10 @@ export function LeadsPage({
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E7E3DB]/50">
                     <button
                       type="button"
-                      onClick={() => onEditLead?.(lead)}
+                      onClick={() => {
+                        setEditingLead(lead)
+                        setIsDrawerOpen(true)
+                      }}
                       className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-[#E7E3DB] text-[#1A1A17] hover:bg-stone-50"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -372,7 +437,10 @@ export function LeadsPage({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onDeleteLead?.(lead)}
+                      onClick={() => {
+                        setDeletingLead(lead)
+                        setIsDeleteDialogOpen(true)
+                      }}
                       className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-[#E7E3DB] text-[#B91C1C] hover:bg-red-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -384,16 +452,16 @@ export function LeadsPage({
             </div>
 
             {/* Pagination Footer */}
-            {totalLeads > 0 && (
+            {total > 0 && (
               <div className="px-6 py-4 border-t border-[#E7E3DB] flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#FAF9F6]/50">
                 <div className="text-xs sm:text-sm text-[#5C5A54]">
-                  Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, totalLeads)} of {totalLeads} leads
+                  Showing {startIndex + 1}-{Math.min(startIndex + 10, total)} of {total} leads
                 </div>
 
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    disabled={safePage === 1}
+                    disabled={currentPage === 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     className="px-3 py-1.5 rounded-lg text-sm font-medium text-[#1A1A17] hover:bg-stone-100 disabled:opacity-40 disabled:pointer-events-none transition-colors"
                   >
@@ -401,7 +469,7 @@ export function LeadsPage({
                   </button>
 
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                    const isActive = page === safePage
+                    const isActive = page === currentPage
                     return (
                       <button
                         key={page}
@@ -421,7 +489,7 @@ export function LeadsPage({
 
                   <button
                     type="button"
-                    disabled={safePage === totalPages}
+                    disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     className="px-3 py-1.5 rounded-lg text-sm font-medium text-[#1A1A17] hover:bg-stone-100 disabled:opacity-40 disabled:pointer-events-none transition-colors"
                   >
@@ -433,6 +501,28 @@ export function LeadsPage({
           </>
         )}
       </div>
+
+      {/* Shared Lead Drawer (Add / Edit) */}
+      <LeadDrawer
+        open={isDrawerOpen}
+        onClose={() => {
+          setIsDrawerOpen(false)
+          setEditingLead(null)
+        }}
+        onSubmit={handleSaveLead}
+        leadToEdit={editingLead}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteLeadDialog
+        open={isDeleteDialogOpen}
+        lead={deletingLead}
+        onClose={() => {
+          setIsDeleteDialogOpen(false)
+          setDeletingLead(null)
+        }}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   )
 }

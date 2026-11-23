@@ -17,15 +17,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const DEFAULT_DEMO_USER: User = {
-  id: "demo-user-1",
-  name: "Keshav Sharma",
-  email: "keshav@leadflow.app",
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem("leadflow_token") || "demo-jwt-token"
+    return localStorage.getItem("leadflow_token")
   })
 
   const [user, setUser] = useState<User | null>(() => {
@@ -34,10 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         return JSON.parse(saved)
       } catch {
-        // Fall back to default
+        // Corrupted JSON fallback
       }
     }
-    return DEFAULT_DEMO_USER
+    return null
   })
 
   const [isLoading, setIsLoading] = useState(false)
@@ -68,24 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}))
+        const error = await res.json().catch(() => ({ error: "Login failed" }))
         throw error
       }
 
       const data = await res.json()
       setToken(data.token)
       setUser(data.user)
-    } catch (err) {
-      // If server is not running or network fails, support demo login locally
-      if (
-        (email === "keshav@leadflow.app" || email === "demo@leadflow.app") &&
-        password === "password123"
-      ) {
-        setToken("demo-jwt-token")
-        setUser(DEFAULT_DEMO_USER)
-        return
-      }
-      throw err
     } finally {
       setIsLoading(false)
     }
@@ -101,19 +84,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}))
+        const error = await res.json().catch(() => ({ error: "Signup failed" }))
         throw error
       }
 
       const data = await res.json()
       setToken(data.token)
       setUser(data.user)
-    } catch (err) {
-      // Local fallback for offline mode
-      const newUser = { id: `user-${Date.now()}`, name, email }
-      setToken(`jwt-${Date.now()}`)
-      setUser(newUser)
-      throw err
     } finally {
       setIsLoading(false)
     }
