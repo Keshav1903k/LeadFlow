@@ -4,7 +4,7 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "node node_modules/esbuild/bin/esbuild src/app.ts --bundle --platform=node --target=node20 --format=cjs --footer:js=\"module.exports = module.exports.default || module.exports;\" --outfile=dist/app.js",
     "postinstall": "prisma generate",
     "start": "node dist/index.js",
     "db:push": "prisma db push",
