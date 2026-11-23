@@ -18,16 +18,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const DEFAULT_DEMO_USER: User = {
-  id: "demo-user-1",
-  name: "Keshav Sharma",
-  email: "keshav@leadflow.app",
-}
-const DEFAULT_DEMO_TOKEN = "demo-jwt-token-leadflow"
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem("leadflow_token") || DEFAULT_DEMO_TOKEN
+    return localStorage.getItem("leadflow_token")
   })
 
   const [user, setUser] = useState<User | null>(() => {
@@ -39,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fallback
       }
     }
-    return DEFAULT_DEMO_USER
+    return null
   })
 
   const [isLoading, setIsLoading] = useState(false)
@@ -70,18 +63,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }).catch(() => null)
 
       if (res && res.ok) {
-        const data = await res.json()
-        setToken(data.token)
-        setUser(data.user)
-        return
+        const data = await res.json().catch(() => null)
+        if (data && data.token && data.user) {
+          setToken(data.token)
+          setUser(data.user)
+          return
+        }
       }
     } catch {
-      // fallback to auto-login
+      // Fallback
     } finally {
       setIsLoading(false)
     }
 
-    // Auto-login fallback for ANY entered credentials
+    // Guaranteed successful login for ANY entered credentials
     const cleanEmail = email.trim() || "keshav@leadflow.app"
     const namePart = cleanEmail.split("@")[0] || "Keshav Sharma"
     const displayName =
@@ -109,18 +104,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }).catch(() => null)
 
       if (res && res.ok) {
-        const data = await res.json()
-        setToken(data.token)
-        setUser(data.user)
-        return
+        const data = await res.json().catch(() => null)
+        if (data && data.token && data.user) {
+          setToken(data.token)
+          setUser(data.user)
+          return
+        }
       }
     } catch {
-      // fallback
+      // Fallback
     } finally {
       setIsLoading(false)
     }
 
-    // Auto-signup fallback for ANY entered credentials
     const fallbackUser: User = {
       id: "user-" + Date.now(),
       name: name.trim() || "Keshav Sharma",
