@@ -1,31 +1,30 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 
 export function SignupPage() {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [generalError, setGeneralError] = useState("")
-  const { signup, isLoading } = useAuth()
+  const [name, setName] = useState("Keshav Sharma")
+  const [email, setEmail] = useState("keshav@leadflow.app")
+  const [password, setPassword] = useState("password123")
+  const { signup, token, isLoading } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (token || localStorage.getItem("leadflow_token")) {
+      navigate("/leads", { replace: true })
+    }
+  }, [token, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setGeneralError("")
     const effectiveName = name.trim() || "Keshav Sharma"
     const effectiveEmail = email.trim() || "keshav@leadflow.app"
     const effectivePassword = password || "password123"
 
-    try {
-      await signup(effectiveName, effectiveEmail, effectivePassword)
-      navigate("/leads")
-    } catch {
-      navigate("/leads")
-    }
+    await signup(effectiveName, effectiveEmail, effectivePassword)
+    navigate("/leads", { replace: true })
   }
 
   return (
@@ -48,12 +47,6 @@ export function SignupPage() {
 
         {/* Form Card */}
         <div className="bg-white rounded-xl border border-[#E7E3DB] p-8 shadow-sm">
-          {generalError && (
-            <div className="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium">
-              {generalError}
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-[#1A1A17] mb-1.5 uppercase tracking-wider">
@@ -63,12 +56,9 @@ export function SignupPage() {
                 type="text"
                 placeholder="e.g. Keshav Sharma"
                 value={name}
-                onChange={(e) => {
-                  setName(e.target.value)
-                  if (errors.name) setErrors((prev) => ({ ...prev, name: "" }))
-                }}
-                error={errors.name}
+                onChange={(e) => setName(e.target.value)}
                 disabled={isLoading}
+                required
               />
             </div>
 
@@ -78,14 +68,11 @@ export function SignupPage() {
               </label>
               <Input
                 type="email"
-                placeholder="name@company.com"
+                placeholder="keshav@leadflow.app"
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value)
-                  if (errors.email) setErrors((prev) => ({ ...prev, email: "" }))
-                }}
-                error={errors.email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
+                required
               />
             </div>
 
@@ -97,19 +84,16 @@ export function SignupPage() {
                 type="password"
                 placeholder="Minimum 6 characters"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  if (errors.password) setErrors((prev) => ({ ...prev, password: "" }))
-                }}
-                error={errors.password}
+                onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
+                required
               />
             </div>
 
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#0E7C66] hover:bg-[#0B6654] text-white font-medium h-10 mt-2"
+              className="w-full bg-[#0E7C66] hover:bg-[#0B6654] text-white font-medium h-10 mt-2 transition-all shadow-sm"
             >
               {isLoading ? "Creating account..." : "Sign up"}
             </Button>

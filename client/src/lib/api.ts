@@ -22,7 +22,7 @@ function getInitialLeads(): Lead[] {
   }))
 }
 
-function getStoredLeads(): Lead[] {
+export function getStoredLeads(): Lead[] {
   if (typeof window === 'undefined') return []
   const raw = localStorage.getItem(STORAGE_KEY)
   if (!raw) {
@@ -45,7 +45,7 @@ function getStoredLeads(): Lead[] {
   }
 }
 
-function saveStoredLeads(leads: Lead[]) {
+export function saveStoredLeads(leads: Lead[]) {
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(leads))
   }
@@ -74,7 +74,7 @@ export async function fetchLeads(params?: {
 
     const url = `${API_BASE}/leads?${query.toString()}`
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 1500)
+    const timeout = setTimeout(() => controller.abort(), 2000)
     const res = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
@@ -85,15 +85,18 @@ export async function fetchLeads(params?: {
     clearTimeout(timeout)
 
     if (res.ok) {
-      return await res.json()
+      const serverData = await res.json()
+      if (serverData && Array.isArray(serverData.leads)) {
+        return serverData
+      }
     }
   } catch {
-    // API unreachable or serverless cold start - fallback to local store
+    // API unreachable or slow - fallback to local store
   }
 
   const allLeads = getStoredLeads()
-  const counts = {
-    all: allLeads.length,
+  const counts: Record<string, number> = {
+    All: allLeads.length,
     New: allLeads.filter((l) => l.status === 'New').length,
     Contacted: allLeads.filter((l) => l.status === 'Contacted').length,
     Qualified: allLeads.filter((l) => l.status === 'Qualified').length,
@@ -123,22 +126,22 @@ export async function fetchLeads(params?: {
 
   const page = params?.page || 1
   const pageSize = 10
-  const totalPages = Math.ceil(filtered.length / pageSize) || 1
-  const data = filtered.slice((page - 1) * pageSize, page * pageSize)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const paginatedLeads = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   return {
-    data,
+    leads: paginatedLeads,
     total: filtered.length,
     page,
     totalPages,
-    counts,
+    statusCounts: counts,
   }
 }
 
 export async function fetchLeadStats() {
   try {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 1500)
+    const timeout = setTimeout(() => controller.abort(), 2000)
     const res = await fetch(`${API_BASE}/leads/stats`, {
       headers: getAuthHeader(),
       signal: controller.signal,
@@ -146,7 +149,10 @@ export async function fetchLeadStats() {
     clearTimeout(timeout)
 
     if (res.ok) {
-      return await res.json()
+      const serverData = await res.json()
+      if (serverData && serverData.counts) {
+        return serverData
+      }
     }
   } catch {
     // API unreachable - fallback to local store
@@ -158,7 +164,7 @@ export async function fetchLeadStats() {
   const conversionRate = totalLeads > 0 ? `${((qualifiedLeads / totalLeads) * 100).toFixed(1)}%` : '0%'
   const sevenDaysAgo = Date.now() - 7 * 86400000
   const addedThisWeek = allLeads.filter((l) => new Date(l.createdAt).getTime() >= sevenDaysAgo).length
-  const pipeline = {
+  const counts = {
     New: allLeads.filter((l) => l.status === 'New').length,
     Contacted: allLeads.filter((l) => l.status === 'Contacted').length,
     Qualified: qualifiedLeads,
@@ -169,11 +175,10 @@ export async function fetchLeadStats() {
     .slice(0, 5)
 
   return {
-    totalLeads,
-    qualifiedLeads,
+    total: totalLeads,
+    counts,
     conversionRate,
     addedThisWeek,
-    pipeline,
     recentLeads,
   }
 }
@@ -187,6 +192,8 @@ export async function createLeadApi(data: {
   status: LeadStatus
 }): Promise<Lead> {
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 2500)
     const res = await fetch(`${API_BASE}/leads`, {
       method: 'POST',
       headers: {
@@ -194,7 +201,10 @@ export async function createLeadApi(data: {
         ...getAuthHeader(),
       },
       body: JSON.stringify(data),
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
+
     if (res.ok) {
       const created = await res.json()
       const leads = getStoredLeads()
@@ -236,6 +246,8 @@ export async function updateLeadApi(
   }>
 ): Promise<Lead> {
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 2500)
     const res = await fetch(`${API_BASE}/leads/${id}`, {
       method: 'PUT',
       headers: {
@@ -243,7 +255,10 @@ export async function updateLeadApi(
         ...getAuthHeader(),
       },
       body: JSON.stringify(data),
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
+
     if (res.ok) {
       const updated = await res.json()
       const leads = getStoredLeads().map((l) => (l.id === id ? updated : l))
@@ -274,12 +289,17 @@ export async function updateLeadApi(
 
 export async function deleteLeadApi(id: string): Promise<void> {
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 2500)
     const res = await fetch(`${API_BASE}/leads/${id}`, {
       method: 'DELETE',
       headers: {
         ...getAuthHeader(),
       },
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
+
     if (res.ok) {
       const leads = getStoredLeads().filter((l) => l.id !== id)
       saveStoredLeads(leads)

@@ -10,8 +10,9 @@ import { SignupPage } from "./pages/SignupPage"
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { token } = useAuth()
   const location = useLocation()
+  const storedToken = typeof window !== "undefined" ? localStorage.getItem("leadflow_token") : null
 
-  if (!token) {
+  if (!token && !storedToken) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
@@ -20,7 +21,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function PublicOnly({ children }: { children: React.ReactNode }) {
   const { token } = useAuth()
-  if (token) {
+  const storedToken = typeof window !== "undefined" ? localStorage.getItem("leadflow_token") : null
+  if (token || storedToken) {
     return <Navigate to="/leads" replace />
   }
   return <>{children}</>

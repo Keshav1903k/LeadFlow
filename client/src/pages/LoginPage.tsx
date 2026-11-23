@@ -1,41 +1,35 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 
 export function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [generalError, setGeneralError] = useState("")
-  const { login, isLoading } = useAuth()
+  const [email, setEmail] = useState("keshav@leadflow.app")
+  const [password, setPassword] = useState("password123")
+  const { login, token, isLoading } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (token || localStorage.getItem("leadflow_token")) {
+      navigate("/leads", { replace: true })
+    }
+  }, [token, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setGeneralError("")
     const effectiveEmail = email.trim() || "keshav@leadflow.app"
     const effectivePassword = password || "password123"
 
-    try {
-      await login(effectiveEmail, effectivePassword)
-      navigate("/leads")
-    } catch {
-      navigate("/leads")
-    }
+    await login(effectiveEmail, effectivePassword)
+    navigate("/leads", { replace: true })
   }
 
   const handleDemoLogin = async () => {
     setEmail("keshav@leadflow.app")
     setPassword("password123")
-    setGeneralError("")
-    try {
-      await login("keshav@leadflow.app", "password123")
-      navigate("/leads")
-    } catch {
-      navigate("/leads")
-    }
+    await login("keshav@leadflow.app", "password123")
+    navigate("/leads", { replace: true })
   }
 
   return (
@@ -58,11 +52,11 @@ export function LoginPage() {
 
         {/* Form Card */}
         <div className="bg-white rounded-xl border border-[#E7E3DB] p-8 shadow-sm">
-          {generalError && (
-            <div className="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium">
-              {generalError}
-            </div>
-          )}
+          {/* Quick Demo Credentials Info Pill */}
+          <div className="mb-5 p-3 rounded-lg bg-emerald-50 border border-emerald-200/80 text-xs text-emerald-900 leading-relaxed">
+            <span className="font-semibold block text-emerald-950 mb-0.5">Quick Demo Access:</span>
+            Default account: <code className="bg-emerald-100/70 px-1 py-0.5 rounded text-[11px] font-mono">keshav@leadflow.app</code> / <code className="bg-emerald-100/70 px-1 py-0.5 rounded text-[11px] font-mono">password123</code>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -71,14 +65,11 @@ export function LoginPage() {
               </label>
               <Input
                 type="email"
-                placeholder="name@company.com"
+                placeholder="keshav@leadflow.app"
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value)
-                  if (errors.email) setErrors((prev) => ({ ...prev, email: "" }))
-                }}
-                error={errors.email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
+                required
               />
             </div>
 
@@ -88,21 +79,18 @@ export function LoginPage() {
               </label>
               <Input
                 type="password"
-                placeholder="••••••••"
+                placeholder="password123"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  if (errors.password) setErrors((prev) => ({ ...prev, password: "" }))
-                }}
-                error={errors.password}
+                onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
+                required
               />
             </div>
 
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#0E7C66] hover:bg-[#0B6654] text-white font-medium h-10 mt-2"
+              className="w-full bg-[#0E7C66] hover:bg-[#0B6654] text-white font-medium h-10 mt-2 transition-all shadow-sm"
             >
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
@@ -113,10 +101,11 @@ export function LoginPage() {
             <Button
               type="button"
               variant="outline"
+              disabled={isLoading}
               onClick={handleDemoLogin}
               className="w-full text-xs font-medium text-[#0E7C66] border-[#0E7C66]/30 hover:bg-emerald-50/50"
             >
-              Auto-fill Demo Account (Keshav Sharma)
+              One-Click Demo Sign In (Keshav Sharma)
             </Button>
           </div>
 

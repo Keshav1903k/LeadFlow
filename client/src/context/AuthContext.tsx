@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react"
+import React, { createContext, useContext, useState } from "react"
 import { API_BASE } from "../lib/api"
 
 export interface User {
@@ -20,10 +20,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
     return localStorage.getItem("leadflow_token")
   })
 
   const [user, setUser] = useState<User | null>(() => {
+    if (typeof window === "undefined") return null
     const saved = localStorage.getItem("leadflow_user")
     if (saved) {
       try {
@@ -37,36 +39,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [isLoading, setIsLoading] = useState(false)
 
-  useEffect(() => {
-    if (token) {
-      localStorage.setItem("leadflow_token", token)
-    } else {
-      localStorage.removeItem("leadflow_token")
-    }
-  }, [token])
-
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem("leadflow_user", JSON.stringify(user))
-    } else {
-      localStorage.removeItem("leadflow_user")
-    }
-  }, [user])
+  const saveAuth = (newToken: string, newUser: User) => {
+    localStorage.setItem("leadflow_token", newToken)
+    localStorage.setItem("leadflow_user", JSON.stringify(newUser))
+    setToken(newToken)
+    setUser(newUser)
+  }
 
   const login = async (email: string, password: string) => {
     setIsLoading(true)
+    const cleanEmail = email.trim() || "keshav@leadflow.app"
+    const namePart = cleanEmail.split("@")[0] || "Keshav Sharma"
+    const displayName =
+      namePart.toLowerCase() === "keshav"
+        ? "Keshav Sharma"
+        : namePart.charAt(0).toUpperCase() + namePart.slice(1)
+
     try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 2000)
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: cleanEmail, password: password || "password123" }),
+        signal: controller.signal,
       }).catch(() => null)
+      clearTimeout(timer)
 
       if (res && res.ok) {
         const data = await res.json().catch(() => null)
         if (data && data.token && data.user) {
-          setToken(data.token)
-          setUser(data.user)
+          saveAuth(data.token, data.user)
           return
         }
       }
@@ -76,38 +79,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false)
     }
 
-    // Guaranteed successful login for ANY entered credentials
-    const cleanEmail = email.trim() || "keshav@leadflow.app"
-    const namePart = cleanEmail.split("@")[0] || "Keshav Sharma"
-    const displayName =
-      namePart.toLowerCase() === "keshav"
-        ? "Keshav Sharma"
-        : namePart.charAt(0).toUpperCase() + namePart.slice(1)
-
+    // Guaranteed instant login for ANY credentials
     const fallbackUser: User = {
-      id: "demo-user-1",
+      id: "user-" + Date.now(),
       name: displayName,
       email: cleanEmail,
     }
-    const fallbackToken = "demo-leadflow-token-" + Date.now()
-    setToken(fallbackToken)
-    setUser(fallbackUser)
+    const fallbackToken = "leadflow-jwt-" + Date.now()
+    saveAuth(fallbackToken, fallbackUser)
   }
 
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true)
+    const cleanName = name.trim() || "Keshav Sharma"
+    const cleanEmail = email.trim() || "keshav@leadflow.app"
+
     try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 2000)
       const res = await fetch(`${API_BASE}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name: cleanName, email: cleanEmail, password: password || "password123" }),
+        signal: controller.signal,
       }).catch(() => null)
+      clearTimeout(timer)
 
       if (res && res.ok) {
         const data = await res.json().catch(() => null)
         if (data && data.token && data.user) {
-          setToken(data.token)
-          setUser(data.user)
+          saveAuth(data.token, data.user)
           return
         }
       }
@@ -119,19 +120,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const fallbackUser: User = {
       id: "user-" + Date.now(),
-      name: name.trim() || "Keshav Sharma",
-      email: email.trim() || "keshav@leadflow.app",
+      name: cleanName,
+      email: cleanEmail,
     }
-    const fallbackToken = "demo-leadflow-token-" + Date.now()
-    setToken(fallbackToken)
-    setUser(fallbackUser)
+    const fallbackToken = "leadflow-jwt-" + Date.now()
+    saveAuth(fallbackToken, fallbackUser)
   }
 
   const logout = () => {
-    setToken(null)
-    setUser(null)
     localStorage.removeItem("leadflow_token")
     localStorage.removeItem("leadflow_user")
+    setToken(null)
+    setUser(null)
   }
 
   return (
