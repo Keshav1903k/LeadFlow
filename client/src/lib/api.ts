@@ -1,6 +1,8 @@
 import { Lead, LeadSource, LeadStatus } from '../types/lead'
 
-const API_BASE = '/api'
+export const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
+  : '/api'
 
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem('leadflow_token')
