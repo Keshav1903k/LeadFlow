@@ -1,0 +1,326 @@
+[
+  {
+    "name": "Aarav Malhotra",
+    "company": "Malhotra Dental Clinic",
+    "email": "aarav@malhotradental.in",
+    "phone": "+91 98110 24763",
+    "source": "Referral",
+    "status": "New",
+    "daysAgo": 0
+  },
+  {
+    "name": "Simran Kaur Bedi",
+    "company": null,
+    "email": "simran.bedi@gmail.com",
+    "phone": "+91 99530 18842",
+    "source": "Website",
+    "status": "New",
+    "daysAgo": 0
+  },
+  {
+    "name": "Rohit Chaudhary",
+    "company": "Chaudhary Textile Exports",
+    "email": "rohit@chaudharytextiles.com",
+    "phone": "+91 98731 66205",
+    "source": "Cold Call",
+    "status": "New",
+    "daysAgo": 1
+  },
+  {
+    "name": "Meenal Iyer",
+    "company": "Brewlane Coffee Roasters",
+    "email": "meenal.iyer@brewlane.co",
+    "phone": "+91 70420 93381",
+    "source": "Facebook",
+    "status": "New",
+    "daysAgo": 1
+  },
+  {
+    "name": "Tanmay Bhatnagar",
+    "company": "Bhatnagar Logistics",
+    "email": "tanmay@bhatnagarlogistics.in",
+    "phone": "+91 88265 41097",
+    "source": "Google Ads",
+    "status": "New",
+    "daysAgo": 2
+  },
+  {
+    "name": "Fatima Siddiqui",
+    "company": "Noor Interiors",
+    "email": "fatima@noorinteriors.in",
+    "phone": "+91 96500 27714",
+    "source": "LinkedIn",
+    "status": "New",
+    "daysAgo": 2
+  },
+  {
+    "name": "Gurpreet Anand",
+    "company": "Anand & Sons Auto Parts",
+    "email": "gurpreet.anand@outlook.com",
+    "phone": "+91 98999 03658",
+    "source": "Cold Call",
+    "status": "New",
+    "daysAgo": 3
+  },
+  {
+    "name": "Divya Nambiar",
+    "company": "Kochi Spice Trail",
+    "email": "divya@kochispicetrail.com",
+    "phone": "+91 85470 12936",
+    "source": "Website",
+    "status": "New",
+    "daysAgo": 4
+  },
+  {
+    "name": "Harsh Vardhan Singhania",
+    "company": "Vardhan Builders & Developers Pvt. Ltd.",
+    "email": "harsh@vardhanbuilders.com",
+    "phone": "+91 99100 58472",
+    "source": "Referral",
+    "status": "New",
+    "daysAgo": 5
+  },
+  {
+    "name": "Ishita Rao",
+    "company": "Pixel Hearth Studio",
+    "email": "ishita.rao@pixelhearth.studio",
+    "phone": "+91 73038 77510",
+    "source": "LinkedIn",
+    "status": "New",
+    "daysAgo": 6
+  },
+  {
+    "name": "Manoj Tripathi",
+    "company": null,
+    "email": "manoj.tripathi1984@yahoo.in",
+    "phone": "+91 98186 30249",
+    "source": "Other",
+    "status": "New",
+    "daysAgo": 7
+  },
+  {
+    "name": "Zoya Khan",
+    "company": "ZK Events & Weddings",
+    "email": "zoya@zkevents.in",
+    "phone": "+91 97170 82365",
+    "source": "Facebook",
+    "status": "New",
+    "daysAgo": 8
+  },
+  {
+    "name": "Nikhil Sethi",
+    "company": "Sethi Pharma Distributors",
+    "email": "nikhil@sethipharma.com",
+    "phone": "+91 98104 77923",
+    "source": "Referral",
+    "status": "Contacted",
+    "daysAgo": 9
+  },
+  {
+    "name": "Anjali Deshmukh",
+    "company": "Greenleaf Nursery",
+    "email": "anjali.d@greenleafnursery.in",
+    "phone": "+91 90290 41856",
+    "source": "Website",
+    "status": "Contacted",
+    "daysAgo": 10
+  },
+  {
+    "name": "Karthik Subramanian",
+    "company": "Sundaram Fabrication Works",
+    "email": "karthik@sundaramfabrication.com",
+    "phone": "+91 94440 26719",
+    "source": "Cold Call",
+    "status": "Contacted",
+    "daysAgo": 11
+  },
+  {
+    "name": "Pooja Reddy",
+    "company": "Reddy & Reddy Associates",
+    "email": "pooja@reddyandreddy.law",
+    "phone": "+91 99890 13567",
+    "source": "LinkedIn",
+    "status": "Contacted",
+    "daysAgo": 12
+  },
+  {
+    "name": "Vivek Arora",
+    "company": "Arora Electricals",
+    "email": "vivek@aroraelectricals.in",
+    "phone": "+91 98730 92481",
+    "source": "Google Ads",
+    "status": "Contacted",
+    "daysAgo": 14
+  },
+  {
+    "name": "Shreya Bansal",
+    "company": "Saffron Lane Catering",
+    "email": "shreya.bansal@saffronlane.com",
+    "phone": "+91 81780 35624",
+    "source": "Facebook",
+    "status": "Contacted",
+    "daysAgo": 15
+  },
+  {
+    "name": "Imran Qureshi",
+    "company": "Qureshi Leather House",
+    "email": "imran@qureshileather.com",
+    "phone": "+91 98110 66038",
+    "source": "Referral",
+    "status": "Contacted",
+    "daysAgo": 17
+  },
+  {
+    "name": "Lakshmi Narayanan",
+    "company": "Narayanan Coaching Academy",
+    "email": "lakshmi@narayananacademy.edu.in",
+    "phone": "+91 99620 48175",
+    "source": "Website",
+    "status": "Contacted",
+    "daysAgo": 19
+  },
+  {
+    "name": "Dev Kohli",
+    "company": "Kohli Fitness Studio",
+    "email": "dev.kohli@kohlifitness.in",
+    "phone": "+91 98101 53390",
+    "source": "Google Ads",
+    "status": "Contacted",
+    "daysAgo": 21
+  },
+  {
+    "name": "Ritika Menon",
+    "company": "Menon Opticals",
+    "email": "ritika@menonopticals.com",
+    "phone": "+91 94470 71028",
+    "source": "Other",
+    "status": "Contacted",
+    "daysAgo": 24
+  },
+  {
+    "name": "Sandeep Gill",
+    "company": "Gill Agro Industries",
+    "email": "sandeep@gillagro.in",
+    "phone": "+91 98150 20673",
+    "source": "Referral",
+    "status": "Qualified",
+    "daysAgo": 18
+  },
+  {
+    "name": "Neha Kulkarni",
+    "company": "Kulkarni Homes",
+    "email": "neha.kulkarni@kulkarnihomes.com",
+    "phone": "+91 98220 64891",
+    "source": "LinkedIn",
+    "status": "Qualified",
+    "daysAgo": 22
+  },
+  {
+    "name": "Abhishek Joshi",
+    "company": "Joshi & Co. Chartered Accountants",
+    "email": "abhishek@joshiandco.in",
+    "phone": "+91 99100 37452",
+    "source": "Website",
+    "status": "Qualified",
+    "daysAgo": 26
+  },
+  {
+    "name": "Farhan Ali",
+    "company": "Ali Handicraft Exports",
+    "email": "farhan@aliexports.com",
+    "phone": "+91 98912 80345",
+    "source": "Cold Call",
+    "status": "Qualified",
+    "daysAgo": 28
+  },
+  {
+    "name": "Pallavi Chatterjee",
+    "company": "Chatterjee Sweets",
+    "email": "pallavi@chatterjeesweets.in",
+    "phone": "+91 98300 51267",
+    "source": "Referral",
+    "status": "Qualified",
+    "daysAgo": 31
+  },
+  {
+    "name": "Rajesh Pillai",
+    "company": "Pillai Marine Services",
+    "email": "rajesh.pillai@pillaimarine.com",
+    "phone": "+91 94960 18834",
+    "source": "LinkedIn",
+    "status": "Qualified",
+    "daysAgo": 35
+  },
+  {
+    "name": "Tanvi Mehra",
+    "company": "Mehra Boutique",
+    "email": "tanvi@mehraboutique.in",
+    "phone": "+91 98710 29046",
+    "source": "Facebook",
+    "status": "Qualified",
+    "daysAgo": 38
+  },
+  {
+    "name": "Yash Agarwal",
+    "company": "Agarwal Packaging Industries",
+    "email": "yash@agarwalpackaging.com",
+    "phone": "+91 97730 46512",
+    "source": "Google Ads",
+    "status": "Qualified",
+    "daysAgo": 42
+  },
+  {
+    "name": "Kabir Saxena",
+    "company": null,
+    "email": "kabir.saxena@gmail.com",
+    "phone": "+91 98189 74120",
+    "source": "Website",
+    "status": "Lost",
+    "daysAgo": 33
+  },
+  {
+    "name": "Bhavna Thakkar",
+    "company": "Thakkar Jewellers",
+    "email": "bhavna@thakkarjewels.com",
+    "phone": "+91 98250 37761",
+    "source": "Facebook",
+    "status": "Lost",
+    "daysAgo": 40
+  },
+  {
+    "name": "Rahul Dhillon",
+    "company": "Dhillon Transport Co.",
+    "email": "rahul@dhillontransport.in",
+    "phone": "+91 98780 63295",
+    "source": "Cold Call",
+    "status": "Lost",
+    "daysAgo": 45
+  },
+  {
+    "name": "Swati Parekh",
+    "company": "Parekh Diagnostics",
+    "email": "swati@parekhlabs.in",
+    "phone": "+91 99250 81430",
+    "source": "LinkedIn",
+    "status": "Lost",
+    "daysAgo": 52
+  },
+  {
+    "name": "Arvind Rajan",
+    "company": "Rajan Motors",
+    "email": "arvind@rajanmotors.com",
+    "phone": "+91 98400 15627",
+    "source": "Referral",
+    "status": "Lost",
+    "daysAgo": 60
+  },
+  {
+    "name": "Sneha Bhatt",
+    "company": "Bhatt Creatives",
+    "email": "sneha@bhattcreatives.in",
+    "phone": "+91 98765 11283",
+    "source": "Other",
+    "status": "Lost",
+    "daysAgo": 75
+  }
+]
